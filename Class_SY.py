@@ -13,23 +13,23 @@ class Customer(object):
         self.env = env
         self.time_info = [round(env.now, 2), None, None, None, None, service_time, round(env.now, 2) + duration]
         # [0 :발생시간, 1: 로봇에 할당 시간, 2:로봇에 실린 시간, 3:고객 도착 시간, 4: 고객 서비스 완료 시간, 5: 서비스 시간, 6:주문 종료 시간]
-        self.location = location
+        self.location = location #[Floor , Room #, 층의 절반]
         self.type = type
         self.size = size
         self.history = []
 
 class Robot(object):
-    def __init__(self, name, env, speed, customers,Operator, end_t = 120, capacity = 4):
+    def __init__(self, name, env, speed, customers,Operator, end_t = 120, capacity = 4, cal_type = 1):
         self.name = name
         self.env = env
         self.speed = speed
         self.capacity = capacity
-        self.visited_nodes = [[25,25]]
+        self.visited_nodes = [[1,1]]
         self.end_t = end_t
         self.history = []
         self.return_t = 0
         self.Process = None
-        env.process(self.Runner(env, Operator, customers))
+        env.process(self.Runner(env, Operator, customers, cal_type = cal_type))
 
 
     def RunTrip(self, env, trip, customers):
@@ -49,18 +49,24 @@ class Robot(object):
         input('T:{} ; 로봇 {} ;트립 완료'.format(env.now, self.name))
 
 
-    def Runner(self, env, Operator, Customers):
+    def Runner(self, env, Operator, Customers, cal_type = 1):
         while self.env.now < self.end_t:
             print(Operator.Route)
             if len(Operator.Route) > 0:
                 trip = Operator.Route[0][1]
+                trip_names = []
+                for info in trip:
+                    trip_names.append(info[3])
                 input('로봇 {} ; T {} ; 경로 {}추가'.format(self.name, int(self.env.now), trip))
                 Operator.history.append(Operator.Route[0][1])
+                del Operator.Route[0]
                 print('로봇{} 수행 후 경로 {}'.format(self.name, Operator.Route))
-                yield env.process(self.RunTrip(env, trip, Customers))
+                if cal_type == 1:
+                    yield env.process(self.RunTrip(env, trip, Customers))
+                else:
+                    yield env.process(self.RunTrip(env, trip_names, Customers))
                 #self.Process = env.process(self.RunTrip(trip[1], Customers))
                 #yield self.Process
-                del Operator.Route[0]
                 print('로봇{} 지우고 난 후 경로 {}'.format(self.name, Operator.Route))
             else:
                 input('T {} ; 로봇 {} '.format(int(self.env.now), self.name))

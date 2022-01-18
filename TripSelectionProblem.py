@@ -5,6 +5,14 @@ from gurobipy import GRB
 
 
 def TripSelectionProblem(D, S, P, r):
+    """
+    Solve the route selection problem
+    :param D:  duplicated info set
+    :param S:  Set of the route`s profit
+    :param P: Dummy
+    :param r: Number of the available robot
+    :return:
+    """
     trip_indexs = list(range(len(S)))
     m = gp.Model("mip1")
     x = m.addVars(len(S), vtype=GRB.BINARY, name="x")
