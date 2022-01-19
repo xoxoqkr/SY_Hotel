@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 
 from Class_SY import *
-from Basic_Func import SystemRunner, SystemRunner2, ValueFinder
+from Basic_Func import SystemRunner, SystemRunner2, ValueFinder, ResultSave
+from Generator import OrderGenerator
 import random
 import simpy
 
 
 
-customer_num = 20
+customer_num = 110
 Customers = {}
 Robots = {}
 cal_type = 2
 env = simpy.Environment()
-run_time = 100
+run_time = 120
+meal_order_ratio = 0.2 #전체 주문 중 식사 주문의 비율
+OrderGenLamda = run_time/customer_num # 전체 고객 수 / 시뮬레이션 시간 = 110/120
 #1. Gen Operator
 Operator = Operator()
 
@@ -24,42 +27,21 @@ for name in range(1,10):
     Customers[name] = Customer(env, name, location, type = 1, size = 1, service_time = 1, duration = 60)
 """
 
-Customers[0] = Customer(env, 0, [0,0,0], type = 1, size = 1)
-pool = []
-floors = list(range(2,17))
-floor_data = [[1,0],[4,24],[10,24],[14,20],[17,19]]
-for floor in floors:
-    rooms = ValueFinder(floor, floor_data)
-    for room in range(1, rooms + 1):
-        pool.append([floor, room])
-
-for name in range(1, customer_num + 1):
-    if name % 2 == 0:
-        while True:
-            location = list(random.choice(pool))
-            if location[0] <= 4:
-                Customers[name] = Customer(env, name, location, type = 1, size = 1, service_time = 1, duration = 60) #자가 격리자
-                print('고객 {}, 타입{}'.format(name, 1))
-                break
-    else:
-        while True:
-            location = list(random.choice(pool))
-            if location[0] > 4:
-                Customers[name] = Customer(env, name, location, type = 0, size = 1, service_time = 1, duration = 60) #자가 격리자
-                print('고객 {}, 타입{}'.format(name, 0))
-                break
-        #Customers[name] = Customer(env, name, location, type=0, size=1, service_time=1, duration=60) #일반
-    pool.remove(location)
-
-
 #3. Gen Robots
 speed = 1
-for name in range(1):
+for name in range(2):
     Robots[name] = Robot(name, env, speed, Customers,Operator, end_t = 120, capacity = 4, cal_type= cal_type)
     Robots[name].return_t = 0
 
 #3. Run system
-
+#3-1 Customer Generator
+Customers[0] = Customer(env, 0, [1,0], type = 1, size = 1)
+env.process(OrderGenerator(env, Customers, customer_num = customer_num,lamda = OrderGenLamda))
 #env.process(SystemRunner(env, Robots, Customers, Operator, 'greedy', speed = speed, interval = 5, end_t = 800))
 env.process(SystemRunner2(env, Robots, Customers, Operator, 'greedy', speed = speed, interval = 5, end_t = 800))
 env.run(run_time)
+
+r1, r2 = ResultSave(Customers, Robots)
+for info in r1:
+    print('로봇 이름;{};서비스고객;{};유휴시간;{}'.format(info[0],info[1],info[2]))
+print('서비스된 고객;{};발생 후 할당;{};할당 후 실림;{};실린 후 고객 도착;{}'.format(r2[0],r2[1],r2[2],r2[3]))
