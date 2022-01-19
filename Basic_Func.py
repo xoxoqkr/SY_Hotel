@@ -63,7 +63,7 @@ def distance2(bf, af, speed = 3600, floor_t = 2/60):
             res = move_t1/speed + ev_wait_t + horizontal_move + move_t2/speed
     if af[0] > 0: #서비스 시간
         res += 45/60
-    if bf[0] <= 4 and af[0] == 1: #todo: 격리자 주문 수행 후 1층으로 이동하는 경우, 소독 시간이 추가로 필요함.
+    if 1 <= bf[0] <= 4 and af[0] == 1: #todo: 격리자 주문 수행 후 1층으로 이동하는 경우, 소독 시간이 추가로 필요함.
         res += 20/60
     return res
 
@@ -95,9 +95,9 @@ def RouteTimeWithTimePenalty(trip_data, customers, speed = 1, now_t = 0, cal_typ
         if cal_type == 1:
             move_t = round(distance(bf.location,af.location)/speed,4)
         else:
-            print(customers[trip[index - 1 ]], '->',customers[trip[index]])
+            #print(customers[trip[index - 1 ]], '->',customers[trip[index]])
             move_t = distance2(bf.location, af.location)
-        print('move_t {}'.format(move_t))
+        #print('move_t {}'.format(move_t))
         route_t += move_t + af.time_info[5]
         violated_t = now_t + route_t - af.time_info[6]
         #if af > 0:
