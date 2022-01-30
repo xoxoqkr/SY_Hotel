@@ -31,6 +31,7 @@ class Robot(object):
         self.Process = None
         self.idle = True
         self.idle_t = 0
+        self.wait_t = 1
         self.served_customers = [0]
         env.process(self.Runner(env, Operator, customers, cal_type = cal_type))
 
@@ -66,7 +67,7 @@ class Robot(object):
         print('T:{} ; 로봇 {} ;트립 완료'.format(env.now, self.name))
 
 
-    def Runner(self, env, Operator, Customers, cal_type = 1, idle_t = 1):
+    def Runner(self, env, Operator, Customers, cal_type = 1):
         while self.env.now < self.end_t:
             print(Operator.Route)
             if len(Operator.Route) > 0:
@@ -90,6 +91,6 @@ class Robot(object):
             else:
                 #self.idle = True
                 print('T {} ; 로봇 {} '.format(int(self.env.now), self.name))
-                yield self.env.timeout(idle_t)
-                self.idle_t += idle_t
+                yield self.env.timeout(self.wait_t)
+                self.idle_t += self.wait_t
                 print('T {} ; 로봇 {} ;운행 가능한 경로 없음; {}'.format(int(self.env.now), self.name, len(Operator.Route)))

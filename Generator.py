@@ -4,7 +4,8 @@ from Basic_Func import ValueFinder
 from Class_SY import Customer
 
 
-def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(range(2, 17)), floor_data = [[4, 24], [10, 24], [14, 20], [17, 16]], meal_order_ratio = 0.2):
+def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(range(2, 17)), floor_data = [[4, 24], [10, 24], [14, 20], [17, 16]], meal_order_ratio = 0.2,
+                   input_data = None):
     #고객 생성기
     pool = []
     #floors = list(range(2, 17))
@@ -17,7 +18,10 @@ def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(r
         rv = random.random()
         if name % 2 == 0:
             while True:
-                location = list(random.choice(pool))
+                if input_data == None:
+                    location = list(random.choice(pool))
+                else:
+                    location = input_data[name][1:3]
                 if location[0] <= 4:
                     Customers[name] = Customer(env, name, location, type=1, size=1, service_time=1,
                                                duration=60)  # 자가 격리자
@@ -25,7 +29,10 @@ def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(r
                     break
         else:
             while True:
-                location = list(random.choice(pool))
+                if input_data == None:
+                    location = list(random.choice(pool))
+                else:
+                    location = input_data[name][1:3]
                 if location[0] > 4:
                     Customers[name] = Customer(env, name, location, type=0, size=1, service_time=1,
                                                duration=60)  # 자가 격리자
@@ -37,3 +44,13 @@ def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(r
         pool.remove(location)
         print('T : {} 고객 수 {}'.format(int(env.now), len(Customers)))
         yield env.timeout(lamda)
+
+
+
+def OrderGenerator2(env, Customers, input_data):
+    for data in input_data:
+        Customers[data[0]] = Customer(env, data[0], data[1:3], type=data[3], size=data[4], service_time=data[5],duration=data[6])  # 자가 격리자
+        #print('info : {}'.format(data))
+        #print('T : {} 고객 수 {}'.format(int(env.now), len(Customers)))
+        if data[7] > 0:
+            yield env.timeout(data[7])

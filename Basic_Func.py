@@ -223,23 +223,7 @@ def TripValidationChecker(route, customers, type_thres = 5):
         return True , 1
 
 
-def TripBuilder(customers, robot_capacity = 5):
-    customer_names = []
-    for customer_name in customers:
-        customer_names.append(customer_name)
-    raw_trips = copy.deepcopy(list(itertools.permutations(customer_names, robot_capacity)))
-    trips = []
-    for info in raw_trips:
-        test = list(info)
-        trips.append(test)
-    for trip in trips:
-        trip.insert(0,0)
-        trip.append(0)
-        #input('계산된 경로 {}'.format(trip))
-    return trips
-
-
-def TripBuilder2(customers, ava_customer_names,  robot_capacity = 5):
+def TripBuilderEnumerate(customers, ava_customer_names,  robot_capacity = 5, slack = 0):
     customer_names = []
     #1 가능한 모든 고객 조합 탐색
     for customer_name in ava_customer_names:
@@ -271,6 +255,28 @@ def TripBuilder2(customers, ava_customer_names,  robot_capacity = 5):
     #input('경로 확인{}'.format(res[:5]))
     return res
 
+
+def TripBuilderHeuristic(customers, ava_customer_names, K = 1, sort_type = 1, robot_capacity = 5, now_t = 0):
+    #sort_type = 1 :선입선출
+    #sort_type = 2: LT가 작은 고객 부터 정렬
+    customer_infos = []
+    #1 가능한 모든 고객 조합 탐색
+    for customer_name in ava_customer_names:
+        customer_infos.append([customer_name, customers[customer_name].time_info[0], customers[customer_name].time_info[6] - now_t])
+        #[고객 이름, 고객 생성 시간, 남은 여유 시간]
+    customer_infos.sort(key = operator.itemgetter(sort_type))
+    trips = []
+    for k in range(K):
+        if len(customer_infos) > (k+1)* robot_capacity:
+            trip_info = customer_infos[k*robot_capacity: (k+1)* robot_capacity]
+            trip = []
+            for info in trip_info:
+                ct = customers[info[0]]
+                trip.append([ct.type, ct.location[0], ct.location[1], ct.name])
+            trip.insert(0, [0, 0, 0, 0])
+            trip.append([0, 0, 0, 0])
+            trips.append(trip)
+    return trips
 
 
 def TripsScore(trips, customers, speed = 1, now_t = 0, cal_type = 1):
@@ -330,7 +336,7 @@ def AvailableCustomer(customers):
     return res
 
 
-def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy', cal_type = 1):
+def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy', cal_type = 1, now_t = 0):
     selected_trip_infos = []
     if assign_type == 'greedy':
         selected_customer_names = []
@@ -347,6 +353,8 @@ def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy'
             if len(set(selected_customer_names) & set(test_names)) == 0:
                 selected_trip_infos.append(trip_info)
                 selected_customer_names += test_names
+                for name in test_names:
+                    customers[name].time_info[1] = now_t
                 select_count += 1
                 print('선택 됨 {} ; {}'.format(selected_customer_names, trip_info[1]))
             if select_count >= len(robots):
@@ -363,30 +371,10 @@ def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy'
     return selected_trip_infos
 
 
-def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800):
-    print('Start')
-    while env.now < end_t:
-        available_robot_names = ComeBackRobot(env.now, Robots, interval)
-        print('운행가능로봇:',available_robot_names)
-        if len(available_robot_names) > 0:
-            customer_names = AvailableCustomer(Customers)
-            all_trips = TripBuilder(customer_names, robot_capacity= Robots[available_robot_names[0]].capacity)
-            print(all_trips[:10])
-            trips = []
-            for trip in all_trips:
-                print('경로{}검토 시작'.format(trip))
-                feasibility, trip_type = TripValidationChecker(trip, Customers, type_thres=5)
-                if feasibility == True:
-                    print('성공')
-                    trips.append(trip)
-            trip_infos = TripsScore(trips, Customers, speed=speed, now_t=env.now)
-            print('로봇들',Robots)
-            selected_trip_infos = RouteRobotAssignSolver(Robots, trip_infos, Customers, assign_type=assign_type)
-            Operator.Route += selected_trip_infos
-        yield env.timeout(interval)
-        input('T {} 인터벌 끝'.format(int(env.now)))
-
-def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0):
+def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0, package_type = 5, wait_t = 1):
+    #package_type = 1 :선입선출
+    #package_type = 2 : LT가 작은 고객 부터 정렬
+    #package_type = 5 : 가능한 모든 경로 구해보기
     print('Start')
     while env.now < end_t:
         available_robot_names = ComeBackRobot(env.now, Robots, interval)
@@ -397,37 +385,49 @@ def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, inte
             continue
         if rho > thres:
             customer_names = AvailableCustomer(Customers)
-            all_trips = TripBuilder2(Customers,customer_names, robot_capacity= Robots[available_robot_names[0]].capacity)
+            robot_capa = Robots[available_robot_names[0]].capacity
+            if package_type in [1,2]:
+                all_trips = TripBuilderHeuristic(Customers, customer_names, K=len(available_robot_names), sort_type=package_type, robot_capacity=robot_capa, now_t=env.now)
+            else:
+                all_trips = TripBuilderEnumerate(Customers,customer_names, robot_capacity= robot_capa)
             print(all_trips[:10])
-            trips = all_trips
             #input('체크')
-            trip_infos = TripsScore(trips, Customers, speed=speed, now_t=env.now, cal_type=cal_type)
+            trip_infos = TripsScore(all_trips, Customers, speed=speed, now_t=env.now, cal_type=cal_type)
             print('trip_infos',trip_infos)
             print('로봇들',Robots)
-            selected_trip_infos = RouteRobotAssignSolver(Robots, trip_infos, Customers, assign_type=assign_type, cal_type=cal_type)
+            selected_trip_infos = RouteRobotAssignSolver(Robots, trip_infos, Customers, assign_type=assign_type, cal_type=cal_type, now_t= env.now)
             Operator.Route += selected_trip_infos
         else:
-            #로봇 대기 후 출발
+            for robot_name in available_robot_names:
+                Robots[robot_name].wait_t = wait_t #t 시간 동안 들어온 로봇은 대기 후 출발
             pass
         yield env.timeout(interval)
-        input('T {} 인터벌 끝'.format(int(env.now)))
+        for trip in Operator.Route:
+            for info in trip:
+                if info[0] > 0:
+                    Customers[info[0]].time_info[0] = None
+        Operator.Route = []
+        #input('T {} 인터벌 끝'.format(int(env.now)))
 
 def ResultSave(Customers, Robots):
     #로봇 필요 산출 값
     robot_res = []
     for robot_name in Robots:
         robot = Robots[robot_name]
-        robot_res.append([robot.name, len(self.served_customers), self.idle_t])
+        robot_res.append([robot.name, len(robot.served_customers), robot.idle_t])
     #고객 필요 산출 값
     customer_t1 = []
     customer_t2 = []
     customer_t3 = []
     for customer_name in Customers:
         customer = Customers[customer_name]
-        robot_res.append([customer.time_info])
-        customer_t1.append(customer.time_info[1] - customer.time_info[0])
-        customer_t2.append(customer.time_info[2] - customer.time_info[1])
-        customer_t3.append(customer.time_info[3] - customer.time_info[2])
+        if customer.time_info[3] != None and customer.name > 0:
+            if customer.time_info[1] == None:
+                input('고객{} 시간정보{}'.format(customer.name, customer.time_info))
+            #robot_res.append([customer.time_info])
+            customer_t1.append(customer.time_info[1] - customer.time_info[0])
+            customer_t2.append(customer.time_info[2] - customer.time_info[1])
+            customer_t3.append(customer.time_info[3] - customer.time_info[2])
     try:
         ave_t1 = sum(customer_t1)/len(customer_t1)
     except:
