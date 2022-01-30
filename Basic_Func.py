@@ -77,6 +77,8 @@ def distance2(bf, af, speed = 3600, floor_t = 2/60):
     floor_room_infos = [[1,0],[4,24],[10,24],[14,20],[17,16]] #층 별 라인에 있는 방 수
     res = 0
     line_info = {0:0,1:1,2:1,3:0} #[[0,3],[1,2]]
+    if bf == [1,0] and af == [1,0]:
+        return 0.1
     if bf[0] == af[0]:#같은 층이라면
         between_room_distance = ValueFinder(bf[0], between_room_distances)
         move_d = 0
@@ -85,19 +87,24 @@ def distance2(bf, af, speed = 3600, floor_t = 2/60):
         #수평이동
         tem = [bf[1], af[1]]
         tem.sort()
+        #if 0 in tem:
+        #    input(tem)
         if tem[0] // f1 == tem[1]// f1: #같은 쪽이라면
             if tem[1] < f1: #오른쪽
-                val = (tem[1], tem[1] - (f1 / 2))
+                val = max(tem[1], tem[1] - (f1 / 2))
             else:  # 왼쪽
-                val = (tem[1], tem[1] - f1)
+                val = max(tem[1], tem[1] - f1)
             move_d += val * between_room_distance
         else: #다른 쪽 이라면
-            val_right = (tem[0], tem[0] - (f1 / 2))
-            val_left = (tem[1], tem[1] - f1)
+            val_right = max(tem[0], tem[0] - (f1 / 2))
+            val_left = max(tem[1], tem[1] - f1)
             move_d += (val_right + val_left) * between_room_distance
-        if line_info[tem[0] // (f1/2)] == line_info[tem[1] // (f1/2)]:
-        #if (tem[0] // (f1/2) in line_info[0] and tem[0] // (f1/2) in line_info[0]) or tem[0] // (f1/2) in line_info[1] and tem[0] // (f1/2) in line_info[1]):
-            #같은 라인임.
+        if int((tem[0]-1) / (f1/2)) > 3 or int((tem[1]-1) / (f1/2)) > 3:
+            print('에러 확인1', bf, af)
+            print('에러확인2', tem[0], tem[1], f1, f1 / 2)
+            print('에러확인3', int((tem[0] - 1) / (f1 / 2)), int((tem[1] - 1) / (f1 / 2)))
+            input('확인필요')
+        if line_info[int((tem[0]-1) / (f1/2))] == line_info[int((tem[1]-1) / (f1/2))]:
             pass
         else:
             move_d += 1.5
@@ -187,6 +194,7 @@ def ComeBackRobot(now_t, robots, interval):
     robot_names = []
     for robot_name in robots:
         robot = robots[robot_name]
+        print(robot.name, robot.return_t, robot.idle, robot.env.now)
         if now_t <= robot.return_t < interval or robot.idle == True:
             robot_names.append(robot.name)
     return robot_names
@@ -236,6 +244,7 @@ def TripBuilder2(customers, ava_customer_names,  robot_capacity = 5):
     #1 가능한 모든 고객 조합 탐색
     for customer_name in ava_customer_names:
         customer_names.append(customer_name)
+    print('탐색 대상 고객들', customer_names)
     raw_trips = copy.deepcopy(list(itertools.combinations(customer_names, robot_capacity)))
     trips = []
     #2탐색한 조합을 경로로 구성
@@ -377,13 +386,14 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
         yield env.timeout(interval)
         input('T {} 인터벌 끝'.format(int(env.now)))
 
-def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0.2):
+def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0):
     print('Start')
     while env.now < end_t:
         available_robot_names = ComeBackRobot(env.now, Robots, interval)
         print('운행가능로봇:',available_robot_names)
-        rho = len(Robots)/ len(AvailableCustomer(Customers))
+        rho = len(AvailableCustomer(Customers)) /len(Robots)
         if len(available_robot_names) == 0:
+            yield env.timeout(interval)
             continue
         if rho > thres:
             customer_names = AvailableCustomer(Customers)
@@ -392,6 +402,7 @@ def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, inte
             trips = all_trips
             #input('체크')
             trip_infos = TripsScore(trips, Customers, speed=speed, now_t=env.now, cal_type=cal_type)
+            print('trip_infos',trip_infos)
             print('로봇들',Robots)
             selected_trip_infos = RouteRobotAssignSolver(Robots, trip_infos, Customers, assign_type=assign_type, cal_type=cal_type)
             Operator.Route += selected_trip_infos
@@ -399,7 +410,7 @@ def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, inte
             #로봇 대기 후 출발
             pass
         yield env.timeout(interval)
-        print('T {} 인터벌 끝'.format(int(env.now)))
+        input('T {} 인터벌 끝'.format(int(env.now)))
 
 def ResultSave(Customers, Robots):
     #로봇 필요 산출 값

@@ -31,7 +31,7 @@ class Robot(object):
         self.Process = None
         self.idle = True
         self.idle_t = 0
-        self.served_customers = []
+        self.served_customers = [0]
         env.process(self.Runner(env, Operator, customers, cal_type = cal_type))
 
 
@@ -45,6 +45,7 @@ class Robot(object):
             if cal_type == 1:
                 move_t = distance(self.visited_nodes[-1], customer.location)
             else:
+                print('{}->{}'.format(self.served_customers[-1], customer.name))
                 print('{}->{}'.format(self.visited_nodes[-1], customer.location))
                 move_t = distance2(self.visited_nodes[-1],customer.location)
             yield env.timeout(move_t)

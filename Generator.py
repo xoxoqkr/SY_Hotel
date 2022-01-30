@@ -4,7 +4,7 @@ from Basic_Func import ValueFinder
 from Class_SY import Customer
 
 
-def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(range(2, 17)), floor_data = [[4, 24], [10, 24], [14, 20], [17, 19]], meal_order_ratio = 0.2):
+def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(range(2, 17)), floor_data = [[4, 24], [10, 24], [14, 20], [17, 16]], meal_order_ratio = 0.2):
     #고객 생성기
     pool = []
     #floors = list(range(2, 17))
