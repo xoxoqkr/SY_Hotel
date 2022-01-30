@@ -10,7 +10,7 @@ import random
 def distance(x, y):
     return round(math.sqrt((x[0]-y[0])**2 + (x[1]-y[1])**2),4)
 
-def distance2(bf, af, speed = 3600, floor_t = 2/60):
+def distance2_org(bf, af, speed = 3600, floor_t = 2/60):
     # x = [floor, Room #]
     # y = [floor, Room #]
     #speed = m/hr
@@ -22,7 +22,7 @@ def distance2(bf, af, speed = 3600, floor_t = 2/60):
         between_room_distance = ValueFinder(bf[0], between_room_distances)
         move_t = ((af[1] - bf[1]) * between_room_distance)
         f1 = ValueFinder(bf[0], floor_room_infos)
-        print('f1',f1,'bf[1]',bf,'af[1]',af)
+        #print('f1',f1,'bf[1]',bf,'af[1]',af)
         try:
             if bf[1] // f1 == af[1] // f1: #같은 라인이라면
                 pass
@@ -67,6 +67,80 @@ def distance2(bf, af, speed = 3600, floor_t = 2/60):
         res += 20/60
     return res
 
+
+def distance2(bf, af, speed = 3600, floor_t = 2/60):
+    # x = [floor, Room #]
+    # y = [floor, Room #]
+    #speed = m/hr
+    ev_waits = [[1,15/60],[4,0],[17,6/60]] #층 별 e/v 기다리는 시간(sec)
+    between_room_distances = [[4,3],[10,3],[14,3.5],[17,4]] #층 별 방 사이 이동 거리 (m)
+    floor_room_infos = [[1,0],[4,24],[10,24],[14,20],[17,16]] #층 별 라인에 있는 방 수
+    res = 0
+    line_info = {0:0,1:1,2:1,3:0} #[[0,3],[1,2]]
+    if bf[0] == af[0]:#같은 층이라면
+        between_room_distance = ValueFinder(bf[0], between_room_distances)
+        move_d = 0
+        #move_t = ((af[1] - bf[1]) * between_room_distance)
+        f1 = ValueFinder(bf[0], floor_room_infos)/2
+        #수평이동
+        tem = [bf[1], af[1]]
+        tem.sort()
+        if tem[0] // f1 == tem[1]// f1: #같은 쪽이라면
+            if tem[1] < f1: #오른쪽
+                val = (tem[1], tem[1] - (f1 / 2))
+            else:  # 왼쪽
+                val = (tem[1], tem[1] - f1)
+            move_d += val * between_room_distance
+        else: #다른 쪽 이라면
+            val_right = (tem[0], tem[0] - (f1 / 2))
+            val_left = (tem[1], tem[1] - f1)
+            move_d += (val_right + val_left) * between_room_distance
+        if line_info[tem[0] // (f1/2)] == line_info[tem[1] // (f1/2)]:
+        #if (tem[0] // (f1/2) in line_info[0] and tem[0] // (f1/2) in line_info[0]) or tem[0] // (f1/2) in line_info[1] and tem[0] // (f1/2) in line_info[1]):
+            #같은 라인임.
+            pass
+        else:
+            move_d += 1.5
+        res = move_d/speed
+    else:
+        ev_wait_t = ValueFinder(bf[0], ev_waits) + 4/60 #4는 e/v타고 내리는 시간
+        vertical_move_t = abs(af[0] - bf[0])*floor_t  #2 : 층간 이동 시간
+        move_d1 = 0
+        move_d2 = 0
+        #bf에서 e/v까지
+        if bf[0] == 1:
+            move_d1 += 7 #1층 로비에서 e/v까지
+        else:
+            bf_between_room_distance = ValueFinder(bf[0], between_room_distances)
+            f1 = ValueFinder(bf[0], floor_room_infos)/2
+            if bf[1] <= f1:
+                val = max(bf[1], bf[1] - (f1/2))
+                #move_d1 = (val*bf_between_room_distance)
+            else:
+                val = max(bf[1], bf[1] - f1)
+                #move_d1 = ((f1*2 - bf[1]) * bf_between_room_distance)
+            move_d1 = (val * bf_between_room_distance)
+        # e/v에서 af까지
+        if af[0] == 1:
+            move_d2 += 7 #1층 로비에서 e/v까지
+        else:
+            af_between_room_distance = ValueFinder(af[0], between_room_distances)
+            f2 = ValueFinder(af[0], floor_room_infos)/2
+            if af[1] <= f2:
+                val = max(af[1], af[1] - (f2 / 2))
+                #move_t2  += ((f2 - af[1])*af_between_room_distance)
+            else:
+                val = max(af[1], af[1] - f2)
+                #move_t2 += ((f2*2 - af[1])*af_between_room_distance)
+            move_d2 = (val * af_between_room_distance)
+            res = move_d1/speed + ev_wait_t + vertical_move_t + move_d2/speed
+    if af[0] > 0: #서비스 시간
+        res += 45/60
+    if 1 <= bf[0] <= 4 and af[0] == 1: #todo: 격리자 주문 수행 후 1층으로 이동하는 경우, 소독 시간이 추가로 필요함.
+        res += 20/60
+    return res
+
+
 def ValueFinder(value, infos):
     res = 0
     for info in infos:
@@ -87,8 +161,8 @@ def RouteTimeWithTimePenalty(trip_data, customers, speed = 1, now_t = 0, cal_typ
             trip.append(info[3])
     else:
         trip = trip_data
-    print('trip_data',trip_data)
-    print('trip',trip)
+    #print('trip_data',trip_data)
+    #print('trip',trip)
     for index in range(1,len(trip)):
         bf = customers[trip[index - 1 ]]
         af = customers[trip[index]]
@@ -303,30 +377,27 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
         yield env.timeout(interval)
         input('T {} 인터벌 끝'.format(int(env.now)))
 
-def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2):
+def SystemRunner2(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0.2):
     print('Start')
     while env.now < end_t:
         available_robot_names = ComeBackRobot(env.now, Robots, interval)
         print('운행가능로봇:',available_robot_names)
-        if len(available_robot_names) > 0:
+        rho = len(Robots)/ len(AvailableCustomer(Customers))
+        if len(available_robot_names) == 0:
+            continue
+        if rho > thres:
             customer_names = AvailableCustomer(Customers)
             all_trips = TripBuilder2(Customers,customer_names, robot_capacity= Robots[available_robot_names[0]].capacity)
             print(all_trips[:10])
             trips = all_trips
             #input('체크')
-            """
-            trips = []
-            for trip in all_trips:
-                print('경로{}검토 시작'.format(trip))
-                feasibility, trip_type = TripValidationChecker(trip, Customers, type_thres=5)
-                if feasibility == True:
-                    print('성공')
-                    trips.append(trip)            
-            """
             trip_infos = TripsScore(trips, Customers, speed=speed, now_t=env.now, cal_type=cal_type)
             print('로봇들',Robots)
             selected_trip_infos = RouteRobotAssignSolver(Robots, trip_infos, Customers, assign_type=assign_type, cal_type=cal_type)
             Operator.Route += selected_trip_infos
+        else:
+            #로봇 대기 후 출발
+            pass
         yield env.timeout(interval)
         print('T {} 인터벌 끝'.format(int(env.now)))
 

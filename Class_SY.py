@@ -59,7 +59,7 @@ class Robot(object):
                 for name2 in trip:
                     customers[name2].time_info[2] = env.now
             self.visited_nodes.append(customer.location)
-            input('T:{} ; 로봇 {} ;고객 {} 도착'.format(env.now, self.name, name))
+            print('T:{} ; 로봇 {} ;고객 {} 도착'.format(env.now, self.name, name))
             visit_count += 1
         self.history.append([env.now, 0, 'Trip End'])
         print('T:{} ; 로봇 {} ;트립 완료'.format(env.now, self.name))

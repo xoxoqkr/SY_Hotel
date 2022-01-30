@@ -29,7 +29,7 @@ for name in range(1,10):
 
 #3. Gen Robots
 speed = 1
-for name in range(2):
+for name in range(3):
     Robots[name] = Robot(name, env, speed, Customers,Operator, end_t = 120, capacity = 4, cal_type= cal_type)
     Robots[name].return_t = 0
 
@@ -41,7 +41,17 @@ env.process(OrderGenerator(env, Customers, customer_num = customer_num,lamda = O
 env.process(SystemRunner2(env, Robots, Customers, Operator, 'greedy', speed = speed, interval = 5, end_t = 800))
 env.run(run_time)
 
+f1 = open('결과 저장.txt','a')
 r1, r2 = ResultSave(Customers, Robots)
 for info in r1:
-    print('로봇 이름;{};서비스고객;{};유휴시간;{}'.format(info[0],info[1],info[2]))
-print('서비스된 고객;{};발생 후 할당;{};할당 후 실림;{};실린 후 고객 도착;{}'.format(r2[0],r2[1],r2[2],r2[3]))
+    content = '로봇 이름;{};서비스고객;{};유휴시간;{} \n '.format(info[0],info[1],info[2])
+    print(content)
+    f1.write(content)
+content = '서비스된 고객;{};발생 후 할당;{};할당 후 실림;{};실린 후 고객 도착;{}'.format(r2[0],r2[1],r2[2],r2[3])
+print(content)
+f1.write(content)
+for robotr_name in Robots:
+    content = Robots[robotr_name].visited_nodes
+    print(content)
+    f1.write(content)
+f1.close()
