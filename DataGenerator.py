@@ -3,7 +3,8 @@
 from Class_SY import *
 from Generator import OrderGenerator
 import simpy
-
+import random
+import numpy as np
 
 for ite in range(10):
     customer_num = 110
@@ -18,7 +19,13 @@ for ite in range(10):
     #2. Gen data
 
     Customers[0] = Customer(env, 0, [1,0], type = 0, size = 1, service_time = 4, duration = 200) #Information Desk
-    env.process(OrderGenerator(env, Customers, customer_num = customer_num,lamda = OrderGenLamda, meal_order_ratio = meal_order_ratio))
+    duration_data = np.random.normal(40,10, size = 10000)
+    duration_data_bigger_than_20 = []
+    for t in duration_data:
+        if t > 20:
+            duration_data_bigger_than_20.append(t)
+    duration_pool = random.sample(duration_data_bigger_than_20, customer_num + 1)
+    env.process(OrderGenerator(env, Customers, customer_num = customer_num,lamda = OrderGenLamda, meal_order_ratio = meal_order_ratio, duration = duration_pool))
     env.run(run_time)
 
     #고객 데이터 저장 부

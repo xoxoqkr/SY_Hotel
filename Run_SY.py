@@ -3,14 +3,16 @@
 from Class_SY import *
 from Basic_Func import SystemRunner, ValueFinder, ResultSave
 from Generator import OrderGenerator,OrderGenerator2
-import random
 import simpy
 
+global package_type
+global data_num
+global robot_num
 
 customer_num = 110
 cal_type = 2
-robot_num = 3
-run_time = 120
+#robot_num = 3
+run_time = 150
 meal_order_ratio = 0.2 #전체 주문 중 식사 주문의 비율
 OrderGenLamda = run_time/customer_num # 전체 고객 수 / 시뮬레이션 시간 = 110/120
 #1. Gen Operator
@@ -25,7 +27,6 @@ for name in range(1,10):
     location = [random.randrange(1,50),random.randrange(1,50) ]
     Customers[name] = Customer(env, name, location, type = 1, size = 1, service_time = 1, duration = 60)
 """
-data_num = 0
 input_data = []
 file = open("data/CustomerData"+str(data_num)+".txt",'r')
 data = file.readlines()
@@ -52,21 +53,32 @@ Customers[0] = Customer(env, 0, [1,0], type = 1, size = 1)
 if input_data == None:
     env.process(OrderGenerator(env, Customers, customer_num = customer_num,lamda = OrderGenLamda))
 else:
-    env.process(OrderGenerator2(env, Customers, input_data))
-env.process(SystemRunner(env, Robots, Customers, Operator, 'greedy', speed = speed, interval = 5, end_t = 800, package_type=2))
+    env.process(OrderGenerator2(env, Customers, input_data, endless = 0))
+env.process(SystemRunner(env, Robots, Customers, Operator, 'greedy', speed = speed, interval = 0.1, end_t = 800, package_type=package_type))
 env.run(run_time)
 
 f1 = open('결과 저장.txt','a')
+f2 = open('결과 저장2.txt','a')
 r1, r2 = ResultSave(Customers, Robots)
+f1.write('로봇 수 ;{} cal_type ;{} \n '.format(robot_num, package_type))
+ave_service_ct_num = []
+ave_idle_t = []
+ave_trip_num = []
 for info in r1:
-    content = '로봇 이름;{};서비스고객;{};유휴시간;{} \n '.format(info[0],info[1],info[2])
+    content = '로봇 이름;{};서비스고객;{};유휴시간;{} \n '.format(info[0],info[1],info[2],info[3])
+    ave_service_ct_num.append(info[1])
+    ave_idle_t.append(info[2])
+    ave_trip_num.append(info[3])
     print(content)
     f1.write(content)
-content = '서비스된 고객;{};발생 후 할당;{};할당 후 실림;{};실린 후 고객 도착;{}'.format(r2[0],r2[1],r2[2],r2[3])
-print(content)
+content = '로봇 수;{};caltype;{};서비스된 고객;{};발생 후 할당;{};할당 후 실림;{};실린 후 고객 도착;{};로봇 당 평균 서비스고객 수;{};평균 유휴 시간;{};로봇운행트립수;{}; \n'.format(robot_num, package_type,r2[0],r2[1],r2[2],r2[3],sum(ave_service_ct_num)/len(ave_service_ct_num),
+                                                                                                               sum(ave_idle_t)/len(ave_idle_t), sum(ave_trip_num)/len(ave_trip_num))
+#print(content)
 f1.write(content)
+f2.write(content)
 for robotr_name in Robots:
     content = Robots[robotr_name].visited_nodes
-    print(content)
-    f1.write(content)
+    print('{}'.format(content))
+    f1.write('{} \n'.format(content))
 f1.close()
+f2.close()

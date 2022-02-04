@@ -11,12 +11,19 @@ class Customer(object):
     def __init__(self, env, name, location, type = 0, size = 1, service_time = 0, duration = 60):
         self.name = name
         self.env = env
-        self.time_info = [round(env.now, 2), None, None, None, None, service_time, round(env.now, 2) + duration]
+        self.time_info = [round(env.now, 2), None, None, None, None, service_time, round(env.now, 2) + duration, None]
         # [0 :발생시간, 1: 로봇에 할당 시간, 2:로봇에 실린 시간, 3:고객 도착 시간, 4: 고객 서비스 완료 시간, 5: 서비스 시간, 6:주문 종료 시간]
         self.location = location #[Floor , Room #, 층의 절반]
         self.type = type
         self.size = size
         self.history = []
+        self.canceal = False
+        env.process(self.Cancelation(env, duration))
+
+    def Cancelation(self, env, t):
+        yield env.timeout(t)
+        self.canceal == True
+
 
 class Robot(object):
     def __init__(self, name, env, speed, customers,Operator, end_t = 120, capacity = 4, cal_type = 1):
@@ -31,8 +38,9 @@ class Robot(object):
         self.Process = None
         self.idle = True
         self.idle_t = 0
-        self.wait_t = 1
+        self.wait_t = 0.05
         self.served_customers = [0]
+        self.trip_num = 0
         env.process(self.Runner(env, Operator, customers, cal_type = cal_type))
 
 
@@ -77,6 +85,7 @@ class Robot(object):
                     trip_names.append(info[3])
                 print('로봇 {} ; T {} ; 경로 {}추가'.format(self.name, int(self.env.now), trip))
                 Operator.history.append(Operator.Route[0][1])
+                self.trip_num += 1
                 del Operator.Route[0]
                 print('로봇{} 수행 후 경로 {}'.format(self.name, Operator.Route))
                 self.idle = False
