@@ -74,7 +74,7 @@ def distance2(bf, af, speed = 3600, floor_t = 2/60):
     #speed = m/hr
     ev_waits = [[1,15/60],[4,0],[17,6/60]] #층 별 e/v 기다리는 시간(sec)
     between_room_distances = [[4,3],[10,3],[14,3.5],[17,4]] #층 별 방 사이 이동 거리 (m)
-    floor_room_infos = [[1,0],[4,24],[10,24],[14,20],[17,16]] #층 별 라인에 있는 방 수
+    floor_room_infos = [[1,0],[4,32],[10,32],[14,28],[17,20]] #층 별 라인에 있는 방 수
     res = 0
     line_info = {0:0,1:1,2:1,3:0} #[[0,3],[1,2]]
     if bf == [1,0] and af == [1,0]:
@@ -194,7 +194,7 @@ def ComeBackRobot(now_t, robots, interval):
     robot_names = []
     for robot_name in robots:
         robot = robots[robot_name]
-        print(robot.name, robot.return_t, robot.idle, robot.env.now)
+        #print(robot.name, robot.return_t, robot.idle, robot.env.now)
         if now_t <= robot.return_t < interval or robot.idle == True:
             robot_names.append(robot.name)
     return robot_names
@@ -223,18 +223,26 @@ def TripValidationChecker(route, customers, type_thres = 5):
         return True , 1
 
 
-def TripBuilderEnumerate(customers, ava_customer_names,  robot_capacity = 5, slack = 0):
+def TripBuilderEnumerate(customers, ava_customer_names,  robot_capacity = 5, over_cts = []):
     customer_names = []
     #1 가능한 모든 고객 조합 탐색
     for customer_name in ava_customer_names:
         customer_names.append(customer_name)
-    print('탐색 대상 고객들', customer_names)
+    #print('탐색 대상 고객들:', customer_names,'2분 미만 고객:',over_cts)
     raw_trips = copy.deepcopy(list(itertools.combinations(customer_names, robot_capacity)))
+    if len(over_cts) > 0:
+        rev_raw_trip = []
+        for info in raw_trips:
+            rev = list(info) + over_cts
+            rev_raw_trip.append(rev)
+        raw_trips = rev_raw_trip
+    #raw_trips += over_cts
     trips = []
     #2탐색한 조합을 경로로 구성
     for trip in raw_trips:
         ct_infos = []
         size = 0
+        #print(trip)
         for customer_name in trip:
             #input('확인 {} {}'.format(trip,customer_name))
             ct = customers[customer_name]
@@ -360,7 +368,7 @@ def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy'
                 test_names = []
                 for info in trip_info[1][1:len(trip_info[1])-1]:
                     test_names.append(info[3])
-            print('{};{};{};{}'.format(selected_customer_names, type(selected_customer_names),trip_info[1],type(trip_info[1])))
+            #print('{};{};{};{}'.format(selected_customer_names, type(selected_customer_names),trip_info[1],type(trip_info[1])))
             if len(set(selected_customer_names) & set(test_names)) == 0:
                 selected_trip_infos.append(trip_info)
                 selected_customer_names += test_names
@@ -382,6 +390,35 @@ def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy'
     return selected_trip_infos
 
 
+def InsertMinCost(route, insert_customer):
+    scores = []
+    ava_seq = [[0,0,0],[0,1,1],[1,0,0],[1,1,0],[1,1,1]]
+    all0_para = True
+    for info in route:
+        if info[0] == 1:
+            all0_para == False
+            break
+    for pos in range(1,len(route)):
+        seq = [route[pos-1][0], insert_customer.type,route[pos][0]]
+        if seq in [ava_seq]:
+            dist1 = distance(route[pos-1][1:3],insert_customer.location)
+            dist2 = distance(insert_customer.location, route[pos][1:3])
+            scores.append([dist1 + dist2, pos])
+        elif seq == [0, 1, 0] and all0_para == True:
+            dist1 = distance(route[pos-1][1:3],insert_customer.location)
+            dist2 = distance(insert_customer.location, route[pos][1:3])
+            add_t = 45
+            scores.append([dist1+dist2+add_t, pos])
+        else:
+            pass
+    scores.sort()
+    pos = scores[0][0]
+    rev_route = copy.deepcopy(route)
+    rev_route.insert(pos, [insert_customer.type, insert_customer.location[0],insert_customer.location[1], insert_customer.name])
+    return rev_route
+
+
+
 def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0, package_type = 5, wait_t = 1):
     #package_type = 1 :선입선출
     #package_type = 2 : LT가 작은 고객 부터 정렬
@@ -389,7 +426,10 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
     print('Start')
     while env.now < end_t:
         available_robot_names = ComeBackRobot(env.now, Robots, interval)
-        print('운행가능로봇:',available_robot_names)
+        if len(available_robot_names) > 1:
+            print('로봇 대수가 2대인 상황')
+        if len(available_robot_names) > 0:
+            print('운행가능로봇:',available_robot_names)
         rho = len(AvailableCustomer(Customers)) /len(Robots)
         if len(available_robot_names) == 0:
             yield env.timeout(interval)
@@ -397,12 +437,38 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
         if rho > thres:
             customer_names = AvailableCustomer(Customers)
             robot_capa = Robots[available_robot_names[0]].capacity
-            if package_type in [1,2]:
+            urgent_ct_names = []
+            for customer_name in customer_names:
+                if Customers[customer_name].time_info[6] - env.now < 2:
+                    urgent_ct_names.append(customer_name)
+                    pass
+            if package_type in [1,2]: #휴리스틱
                 all_trips = TripBuilderHeuristic(Customers, customer_names, K=len(available_robot_names), sort_type=package_type, robot_capacity=robot_capa, now_t=env.now)
-            else:
+            elif package_type == 3: #긴급한 주문이 존재시, 해당 주문을 먼저 집어 넣는 경우
+                #input('확인1')
                 all_trips = []
-                for length in range(robot_capa):
-                    tem = TripBuilderEnumerate(Customers,customer_names, robot_capacity= length)
+                if len(urgent_ct_names) == 0:
+                    #input('확인2')
+                    for length in range(1,robot_capa):
+                        tem = TripBuilderEnumerate(Customers,customer_names, robot_capacity= length)
+                        all_trips += tem
+                else:
+                    rev_ava_customer_names = [elem for elem in customer_names if elem not in urgent_ct_names]
+                    #input(rev_ava_customer_names)
+                    if robot_capa - len(urgent_ct_names) > 0:
+                        #input('확인3')
+                        for length in range(1,robot_capa - len(urgent_ct_names)):
+                            #input(length1)
+                            tem = TripBuilderEnumerate(Customers,rev_ava_customer_names, robot_capacity= length, over_cts= urgent_ct_names)
+                            all_trips += tem
+                    else:
+                        for length in range(1,robot_capa):
+                            tem = TripBuilderEnumerate(Customers, urgent_ct_names, robot_capacity=length)
+                            all_trips += tem
+            else: #경로 효율성만을 고려하는 경우
+                all_trips = []
+                for length in range(1, robot_capa):
+                    tem = TripBuilderEnumerate(Customers, customer_names, robot_capacity=length)
                     all_trips += tem
                 #all_trips = TripBuilderEnumerate(Customers,customer_names, robot_capacity= robot_capa)
             #print(all_trips[:10])
@@ -422,7 +488,7 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
                 if type(info) != list:
                     print('구성 확인',info)
                     input(trip)
-                print('구성 확인', info)
+                #print('구성 확인', info)
                 if info[3] > 0:
                     Customers[info[3]].time_info[1] = None
                     Customers[info[3]].time_info[7] = env.now
@@ -434,11 +500,14 @@ def ResultSave(Customers, Robots):
     robot_res = []
     for robot_name in Robots:
         robot = Robots[robot_name]
-        robot_res.append([robot.name, len(robot.served_customers), robot.idle_t, robot.trip_num])
+        robot_res.append([robot.name, len(robot.served_customers), robot.idle_t, robot.trip_num, robot.idle_info])
     #고객 필요 산출 값
     customer_t1 = []
     customer_t2 = []
     customer_t3 = []
+    customer_t4 = []
+    customer_t5 = []
+    customer_t6 = []
     for customer_name in Customers:
         customer = Customers[customer_name]
         if customer.time_info[3] != None and customer.name > 0:
@@ -449,6 +518,11 @@ def ResultSave(Customers, Robots):
                 customer_t1.append(customer.time_info[1] - customer.time_info[0])
                 customer_t2.append(customer.time_info[2] - customer.time_info[1])
                 customer_t3.append(customer.time_info[3] - customer.time_info[2])
+            if customer.time_info[3] > customer.time_info[6]:
+                print('결과확인',customer.time_info)
+                customer_t4.append(customer.time_info[3] - customer.time_info[6])
+                customer_t5.append(customer.time_info[2] - customer.time_info[1])
+                customer_t6.append(customer.time_info[3] - customer.time_info[2])
     try:
         ave_t1 = sum(customer_t1)/len(customer_t1)
     except:
@@ -461,5 +535,17 @@ def ResultSave(Customers, Robots):
         ave_t3 = sum(customer_t3)/len(customer_t3)
     except:
         ave_t3 = 0
-    customer_res = [len(customer_t3), ave_t1, ave_t2, ave_t3]
+    try:
+        ave_t4 = sum(customer_t4)/len(customer_t4)
+    except:
+        ave_t4 = 0
+    try:
+        ave_t5 = sum(customer_t5)/len(customer_t5)
+    except:
+        ave_t5 = 0
+    try:
+        ave_t6 = sum(customer_t6)/len(customer_t6)
+    except:
+        ave_t6 = 0
+    customer_res = [len(customer_t3), ave_t1, ave_t2, ave_t3,ave_t4, ave_t5, ave_t6,len(customer_t4)]
     return robot_res, customer_res

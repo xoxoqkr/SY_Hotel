@@ -51,10 +51,28 @@ def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(r
 
 
 
-def OrderGenerator2(env, Customers, input_data, endless = 0):
+def OrderGenerator2(env, Customers, input_data, endless = 0, interval = 1, duration_index = 5):
     for data in input_data:
-        Customers[data[0]] = Customer(env, data[0], data[1:3], type=data[3], size=data[4], service_time=data[5],duration = max(data[6],endless))  # 자가 격리자
-        #print('info : {}'.format(data))
-        #print('T : {} 고객 수 {}'.format(int(env.now), len(Customers)))
-        if data[7] > 0:
+        Customers[data[0]] = Customer(env, data[0], data[1:3], type=data[3], size=data[4], service_time=1,duration = max(data[duration_index],endless))  # 자가 격리자
+        try:
             yield env.timeout(data[7])
+        except:
+            yield env.timeout(interval)
+
+
+def InputDataTransform(dir):
+    input_data = []
+    #file = open("data/CustomerData"+str(data_num)+".txt",'r')
+    file = open(dir+'.txt','r')
+    data = file.readlines()
+    for org_info in data[1:]:
+        #info = org_info.split(';')
+        info = org_info.split('\t')
+        #print(info)
+        tem = []
+        for ele in info[:5]:
+            tem.append(int(ele))
+        for ele in info[5:8]:
+            tem.append(float(ele))
+        input_data.append(tem)
+    return input_data

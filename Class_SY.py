@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from Basic_Func import distance, distance2
-
+from Basic_Func import distance, distance2, AvailableCustomer
 
 class Operator(object):
     def __init__(self):
@@ -18,7 +17,7 @@ class Customer(object):
         self.size = size
         self.history = []
         self.canceal = False
-        env.process(self.Cancelation(env, duration))
+        #env.process(self.Cancelation(env, duration))
 
     def Cancelation(self, env, t):
         yield env.timeout(t)
@@ -38,6 +37,7 @@ class Robot(object):
         self.Process = None
         self.idle = True
         self.idle_t = 0
+        self.idle_info = []
         self.wait_t = 0.05
         self.served_customers = [0]
         self.trip_num = 0
@@ -81,9 +81,11 @@ class Robot(object):
             if len(Operator.Route) > 0:
                 trip = Operator.Route[0][1]
                 trip_names = []
+                size = 0
                 for info in trip:
                     trip_names.append(info[3])
-                print('로봇 {} ; T {} ; 경로 {}추가'.format(self.name, int(self.env.now), trip))
+                    size += Customers[info[3]].size
+                print('로봇 {} ; T {} ; 경로 {} 추가됨 : 무게 {}'.format(self.name, int(self.env.now), trip,size))
                 Operator.history.append(Operator.Route[0][1])
                 self.trip_num += 1
                 del Operator.Route[0]
@@ -100,6 +102,8 @@ class Robot(object):
             else:
                 #self.idle = True
                 print('T {} ; 로봇 {} '.format(int(self.env.now), self.name))
+                self.idle_info.append([env.now, len(Operator.Route), len(AvailableCustomer(Customers))])
                 yield self.env.timeout(self.wait_t)
                 self.idle_t += self.wait_t
+                #self.idle_info.append([env.now,len(Operator.Route),len(AvailableCustomer(Customers))])
                 print('T {} ; 로봇 {} ;운행 가능한 경로 없음; {}'.format(int(self.env.now), self.name, len(Operator.Route)))
