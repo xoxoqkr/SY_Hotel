@@ -76,7 +76,7 @@ class Robot(object):
 
 
     def Runner(self, env, Operator, Customers, cal_type = 1):
-        while self.env.now < self.end_t:
+        while env.now < self.end_t:
             print(Operator.Route)
             if len(Operator.Route) > 0:
                 trip = Operator.Route[0][1]
@@ -101,16 +101,17 @@ class Robot(object):
                 print('로봇{} 지우고 난 후 경로 {}'.format(self.name, Operator.Route))
             else:
                 #self.idle = True
-                print('T {} ; 로봇 {} '.format(int(self.env.now), self.name))
+                print('T {} ; 로봇 {} 대기 시작'.format(self.env.now, self.name))
                 self.idle_info.append([env.now, len(Operator.Route), len(AvailableCustomer(Customers))])
-                yield self.env.timeout(self.wait_t)
+                yield env.timeout(self.wait_t)
                 self.idle_t += self.wait_t
                 #self.idle_info.append([env.now,len(Operator.Route),len(AvailableCustomer(Customers))])
                 print('T {} ; 로봇 {} ;운행 가능한 경로 없음; {}'.format(round(self.env.now,4), self.name, len(Operator.Route)))
+                print('로봇 {} R대기 끝 {}'.format(self.name, env.now))
                 if len(AvailableCustomer(Customers)) > 3:
                     size = 0
                     for customer_name in AvailableCustomer(Customers):
                         print('고객', customer_name,'시간정보',Customers[customer_name].time_info)
                         size += Customers[customer_name].size
                     print('고객 사이즈',size)
-                    input('확인 필요')
+                    #input('확인 필요')
