@@ -194,7 +194,7 @@ def ComeBackRobot(now_t, robots, interval):
     robot_names = []
     for robot_name in robots:
         robot = robots[robot_name]
-        #print(robot.name, robot.return_t, robot.idle, robot.env.now)
+        print('로봇 예상 도착 정보',robot.name, robot.return_t, robot.idle, robot.env.now)
         if now_t <= robot.return_t < interval or robot.idle == True:
             robot_names.append(robot.name)
     return robot_names
@@ -430,11 +430,12 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
             print('로봇 대수가 2대인 상황')
         if len(available_robot_names) > 0:
             print('운행가능로봇:',available_robot_names)
-        rho = len(AvailableCustomer(Customers)) /len(Robots)
+        rho = len(AvailableCustomer(Customers)) /len(available_robot_names)
         if len(available_robot_names) == 0:
             yield env.timeout(interval)
             continue
         if rho > thres:
+            print('탐색시작::고객수',len(AvailableCustomer(Customers)))
             customer_names = AvailableCustomer(Customers)
             robot_capa = Robots[available_robot_names[0]].capacity
             urgent_ct_names = []
@@ -443,6 +444,7 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
                     urgent_ct_names.append(customer_name)
                     pass
             if package_type in [1,2]: #휴리스틱
+                print('휴리스틱')
                 all_trips = TripBuilderHeuristic(Customers, customer_names, K=len(available_robot_names), sort_type=package_type, robot_capacity=robot_capa, now_t=env.now)
             elif package_type == 3: #긴급한 주문이 존재시, 해당 주문을 먼저 집어 넣는 경우
                 #input('확인1')

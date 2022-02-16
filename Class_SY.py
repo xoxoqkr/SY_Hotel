@@ -106,4 +106,11 @@ class Robot(object):
                 yield self.env.timeout(self.wait_t)
                 self.idle_t += self.wait_t
                 #self.idle_info.append([env.now,len(Operator.Route),len(AvailableCustomer(Customers))])
-                print('T {} ; 로봇 {} ;운행 가능한 경로 없음; {}'.format(int(self.env.now), self.name, len(Operator.Route)))
+                print('T {} ; 로봇 {} ;운행 가능한 경로 없음; {}'.format(round(self.env.now,4), self.name, len(Operator.Route)))
+                if len(AvailableCustomer(Customers)) > 3:
+                    size = 0
+                    for customer_name in AvailableCustomer(Customers):
+                        print('고객', customer_name,'시간정보',Customers[customer_name].time_info)
+                        size += Customers[customer_name].size
+                    print('고객 사이즈',size)
+                    input('확인 필요')
