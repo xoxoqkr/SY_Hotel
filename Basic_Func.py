@@ -431,7 +431,7 @@ def InsertMinCost(route, insert_customer):
 
 
 
-def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0, package_type = 5, wait_t = 0):
+def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0, package_type = 5, wait_t = 0, urgent_ratio = 0.2):
     #package_type = 1 :선입선출
     #package_type = 2 : LT가 작은 고객 부터 정렬
     #package_type = 5 : 가능한 모든 경로 구해보기
@@ -452,7 +452,11 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
             robot_capa = Robots[available_robot_names[0]].capacity
             urgent_ct_names = []
             for customer_name in customer_names:
-                if Customers[customer_name].time_info[6] - env.now < 2:
+                customer = Customers[customer_name]
+                q_para = 0.2
+                if 0 < customer.location[1] < 5: #격리고객의 경우 더 우선적으로 급한 고객에 할당되도록
+                    q_para = 0.5
+                if customer.time_info[6] - env.now < customer.duration *urgent_ratio * q_para:
                     urgent_ct_names.append(customer_name)
                     pass
             if package_type in [1,2]: #휴리스틱
@@ -480,14 +484,13 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
                         for length in range(1,robot_capa):
                             tem = TripBuilderEnumerate(Customers, urgent_ct_names, robot_capacity=length)
                             all_trips += tem
-            else: #경로 효율성만을 고려하는 경우
+            elif package_type == 4: #경로 효율성만을 고려하는 경우
                 all_trips = []
                 for length in range(1, robot_capa):
                     tem = TripBuilderEnumerate(Customers, customer_names, robot_capacity=length)
                     all_trips += tem
-                #all_trips = TripBuilderEnumerate(Customers,customer_names, robot_capacity= robot_capa)
-            #print(all_trips[:10])
-            #input('체크')
+            else:
+                pass
             trip_infos = TripsScore(all_trips, Customers, speed=speed, now_t=env.now, cal_type=cal_type)
             #print('trip_infos',trip_infos)
             print('T {}::로봇 수 {} :: 고객 수{}'.format(int(env.now),len(available_robot_names),len(customer_names)))
@@ -512,7 +515,7 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
         Operator.Route = []
         #input('T {} 인터벌 끝'.format(int(env.now)))
 
-def ResultSave(Customers, Robots):
+def ResultSave(Customers, Robots, now_t):
     #로봇 필요 산출 값
     robot_res = []
     for robot_name in Robots:
@@ -525,10 +528,22 @@ def ResultSave(Customers, Robots):
     customer_t4 = []
     customer_t5 = []
     customer_t6 = []
+    q_customer_t1 = []
+    q_customer_t2 = []
+    q_customer_t3 = []
+    n_customer_t1 = []
+    n_customer_t2 = []
+    n_customer_t3 = []
+    unserved_customer_t = []
     served_count = 0
+    tw_over_customer_count = 0
+    q_served = 0
+    n_served = 0
     for customer_name in Customers:
         customer = Customers[customer_name]
-        if customer.time_info[3] != None and customer.name > 0:
+        if customer.name == 0:
+            continue
+        if customer.time_info[3] != None:
             print('결과확인', customer.name, customer.time_info)
             if customer.time_info[1] == None:
                 input('고객{} 시간정보{}'.format(customer.name, customer.time_info))
@@ -541,31 +556,29 @@ def ResultSave(Customers, Robots):
                 customer_t4.append(customer.time_info[3] - customer.time_info[6])
                 customer_t5.append(customer.time_info[2] - customer.time_info[1])
                 customer_t6.append(customer.time_info[3] - customer.time_info[2])
+                tw_over_customer_count += 1
+            else:
+                pass
+            if 1 < customer.location[0] <= 4 :
+                q_customer_t1.append(customer.time_info[1] - customer.time_info[0])
+                q_customer_t2.append(customer.time_info[2] - customer.time_info[1])
+                q_customer_t3.append(customer.time_info[3] - customer.time_info[2])
+                q_served += 1
+            else:
+                n_customer_t1.append(customer.time_info[1] - customer.time_info[0])
+                n_customer_t2.append(customer.time_info[2] - customer.time_info[1])
+                n_customer_t3.append(customer.time_info[3] - customer.time_info[2])
+                n_served += 1
             served_count += 1
+        else:
+            unserved_customer_t.append(now_t - customer.time_info[0])
     print('서비스된 고객 수 :',served_count)
-    try:
-        ave_t1 = sum(customer_t1)/len(customer_t1)
-    except:
-        ave_t1 = 0
-    try:
-        ave_t2 = sum(customer_t2)/len(customer_t2)
-    except:
-        ave_t2 = 0
-    try:
-        ave_t3 = sum(customer_t3)/len(customer_t3)
-    except:
-        ave_t3 = 0
-    try:
-        ave_t4 = sum(customer_t4)/len(customer_t4)
-    except:
-        ave_t4 = 0
-    try:
-        ave_t5 = sum(customer_t5)/len(customer_t5)
-    except:
-        ave_t5 = 0
-    try:
-        ave_t6 = sum(customer_t6)/len(customer_t6)
-    except:
-        ave_t6 = 0
-    customer_res = [len(customer_t3), ave_t1, ave_t2, ave_t3,ave_t4, ave_t5, ave_t6,len(customer_t4)]
+    res = []
+    infos = [customer_t1,customer_t2,customer_t3,customer_t4,customer_t5,customer_t6,q_customer_t1,q_customer_t2,q_customer_t3,n_customer_t1,n_customer_t2,n_customer_t3,unserved_customer_t]
+    for info in infos:
+        ave_val = 0
+        if len(info) > 0:
+            ave_val = sum(info)/len(info)
+        res.append(ave_val)
+    customer_res = [len(customer_t3)] + res + [tw_over_customer_count, q_served, n_served]
     return robot_res, customer_res

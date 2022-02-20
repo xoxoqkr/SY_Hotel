@@ -1,11 +1,11 @@
 data_files = []
-for i in [1,2]:
-    for j in range(1,6):
+for i in [1]:
+    for j in range(1,3):
         data_files.append('CustomerData_Case'+str(i)+'_ex'+str(j))
 #data_files = ['CustomerData_Case1_ex1']
-cal_types = [1,2,3,4]
-rider_nums = [1]
-duration_types = [1,2]
+cal_types = [3]
+rider_nums = [2,3]
+duration_types = [1]
 
 ite_count = 0
 for data in data_files:

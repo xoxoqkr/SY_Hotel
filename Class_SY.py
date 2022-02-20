@@ -12,6 +12,7 @@ class Customer(object):
         self.env = env
         self.time_info = [round(env.now, 2), None, None, None, None, service_time, round(env.now, 2) + duration, None]
         # [0 :발생시간, 1: 로봇에 할당 시간, 2:로봇에 실린 시간, 3:고객 도착 시간, 4: 고객 서비스 완료 시간, 5: 서비스 시간, 6:주문 종료 시간]
+        self.duration = duration
         self.location = location #[Floor , Room #, 층의 절반]
         self.type = type
         self.size = size

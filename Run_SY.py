@@ -45,11 +45,11 @@ if input_data == None:
 else:
     env.process(OrderGenerator2(env, Customers, input_data, endless = 0, interval = OrderGenLamda, duration_index = 4 + duration_index))
 env.process(SystemRunner(env, Robots, Customers, Operator, 'greedy', speed = speed, interval = 0.1, end_t = 800, package_type=package_type))
-env.run(run_time)
+env.run(run_time + 10)
 
 f1 = open('결과 저장.txt','a')
 f2 = open('결과 저장2.txt','a')
-r1, r2 = ResultSave(Customers, Robots)
+r1, r2 = ResultSave(Customers, Robots, env.now)
 f1.write('로봇 수 ;{} cal_type ;{} \n '.format(robot_num, package_type))
 ave_service_ct_num = []
 ave_idle_t = []
@@ -62,14 +62,24 @@ for info in r1:
     print(content)
     f1.write(content)
 
-header = '데이터파일;로봇 수;caltype;TW종류;서비스된 고객;발생 후 할당;할당 후 실림;실린 후 고객 도착;' \
-         '로봇 당 평균 서비스고객 수;평균 유휴 시간;로봇운행트립수;초과고객t1;초과고객t2;초과고객t3;초과고객수;\n'
+header = '데이터파일;로봇 수;caltype;TW종류;서비스된 고객;발생 후 할당t;할당 후 실림t;실린 후 고객 도착t;' \
+         '로봇 당 평균 서비스고객 수;평균 유휴 시간;로봇운행트립수;초과고객t1;초과고객t2;초과고객t3;' \
+         '격리고객t1;격리고객t2;격리고객t3;일반고객t1;일반고객t2;일반고객t3;서비스X고객 대기시간;서비스고객중tw초과고객수;' \
+         '격리고객수;일반고객수;\n'
 if ite_count == 0:
     f2.write(header)
 f1.write(header)
-content = '{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};\n'.format(data_file,robot_num, package_type,duration_index,r2[0],r2[1],r2[2],r2[3],
+#print(len(r2))
+#print(r2)
+#test = [data_file,robot_num, package_type,duration_index,r2[0],r2[1],r2[2],r2[3],
+#                                                              sum(ave_service_ct_num)/len(ave_service_ct_num),sum(ave_idle_t)/len(ave_idle_t),
+#                                                              sum(ave_trip_num)/len(ave_trip_num),r2[4],r2[5],r2[6],r2[7],r2[8],r2[9],r2[10],r2[11],r2[12],r2[13]]
+#print(len(test))
+#input('확인1')
+content = '{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};\n'.format(data_file,robot_num, package_type,duration_index,r2[0],r2[1],r2[2],r2[3],
                                                               sum(ave_service_ct_num)/len(ave_service_ct_num),sum(ave_idle_t)/len(ave_idle_t),
-                                                              sum(ave_trip_num)/len(ave_trip_num),r2[4],r2[5],r2[6],r2[7])
+                                                              sum(ave_trip_num)/len(ave_trip_num),r2[4],r2[5],r2[6],r2[7],r2[8],r2[9],r2[10],r2[11],r2[12],r2[13],r2[14],
+                                                                                              r2[15],r2[16])
 f1.write(content)
 f2.write(content)
 for robotr_name in Robots:
