@@ -248,6 +248,7 @@ def TripBuilderEnumerate(customers, ava_customer_names,  ite_type = 'combination
         for info in raw_trips:
             for add in over_cts_com:
                 rev = list(info) + list(add)
+                rev = copy.deepcopy(list(itertools.permutations(rev, len(rev))))
                 rev_raw_trip.append(rev)
         raw_trips = rev_raw_trip
     #raw_trips += over_cts
