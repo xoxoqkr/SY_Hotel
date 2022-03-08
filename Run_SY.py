@@ -49,7 +49,7 @@ env.run(run_time + 10)
 
 f1 = open('결과 저장.txt','a')
 f2 = open('결과 저장2.txt','a')
-r1, r2 = ResultSave(Customers, Robots, env.now)
+r1, r2, ct_data = ResultSave(Customers, Robots, env.now)
 f1.write('로봇 수 ;{} cal_type ;{} \n '.format(robot_num, package_type))
 ave_service_ct_num = []
 ave_idle_t = []
@@ -65,7 +65,7 @@ for info in r1:
 header = '데이터파일;로봇 수;caltype;TW종류;서비스된 고객;발생 후 할당t;할당 후 실림t;실린 후 고객 도착t;' \
          '로봇 당 평균 서비스고객 수;평균 유휴 시간;로봇운행트립수;초과고객t1;초과고객t2;초과고객t3;' \
          '격리고객t1;격리고객t2;격리고객t3;일반고객t1;일반고객t2;일반고객t3;서비스X고객 대기시간;서비스고객중tw초과고객수;' \
-         '격리고객수;일반고객수;\n'
+         '격리고객수(서비스됨);일반고객수(서비스됨);격리고객수(tw내서비스);일반고객수(tw내서비스);격리고객수(발생);일반고객수(발생);\n'
 if ite_count == 0:
     f2.write(header)
 f1.write(header)
@@ -76,10 +76,10 @@ f1.write(header)
 #                                                              sum(ave_trip_num)/len(ave_trip_num),r2[4],r2[5],r2[6],r2[7],r2[8],r2[9],r2[10],r2[11],r2[12],r2[13]]
 #print(len(test))
 #input('확인1')
-content = '{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};\n'.format(data_file,robot_num, package_type,duration_index,r2[0],r2[1],r2[2],r2[3],
+content = '{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};{};\n'.format(data_file,robot_num, package_type,duration_index,r2[0],r2[1],r2[2],r2[3],
                                                               sum(ave_service_ct_num)/len(ave_service_ct_num),sum(ave_idle_t)/len(ave_idle_t),
                                                               sum(ave_trip_num)/len(ave_trip_num),r2[4],r2[5],r2[6],r2[7],r2[8],r2[9],r2[10],r2[11],r2[12],r2[13],r2[14],
-                                                                                              r2[15],r2[16])
+                                                                                              r2[15],r2[16],r2[17],r2[18],r2[19],r2[20])
 f1.write(content)
 f2.write(content)
 for robotr_name in Robots:
@@ -88,3 +88,13 @@ for robotr_name in Robots:
     f1.write('{} \n'.format(content))
 f1.close()
 f2.close()
+f1 = open('고객 정보 저장.txt','a')
+header1 = '데이터;{};로봇수;{};방식;{};\n'.format(data_file,robot_num, package_type)
+f1.write(header1)
+header2 = '고객이름;생성시점;패키지구성시점;로봇에 실리 시점;고객 도착시점;TW종료 시점;층;호실; \n'
+f1.write(header2)
+for ct_info in ct_data:
+    content = '{};{};{};{};{};{};{};{}; \n'.format(ct_info[0],ct_info[1],ct_info[2],ct_info[3],ct_info[4],ct_info[5],ct_info[6],ct_info[7])
+    f1.write(content)
+f1.close()
+

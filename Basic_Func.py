@@ -252,7 +252,7 @@ def TripBuilderEnumerate(customers, ava_customer_names,  robot_capacity = 5, ove
             ct_infos.append([ct.type,ct.location[0],ct.location[1],ct.name])
         if size > 4 or len(ct_infos) == 0:
             continue
-        ct_infos.sort(key = operator.itemgetter(0,1,2))
+        ct_infos.sort(key = operator.itemgetter(0,1,2)) #todo 0223:고정된 순서가 아닌, TW를 고려한 최단 경로로 수정 할 것.
         route = ct_infos
         #route = sorted(ct_infos, key=lambda x: x[2])
         route.insert(0,[0,0,0,0])
@@ -454,11 +454,12 @@ def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, inter
             for customer_name in customer_names:
                 customer = Customers[customer_name]
                 q_para = 0.2
-                if 0 < customer.location[1] < 5: #격리고객의 경우 더 우선적으로 급한 고객에 할당되도록
+                if 0 < customer.location[0] < 5: #격리고객의 경우 더 우선적으로 급한 고객에 할당되도록
                     q_para = 0.5
-                if customer.time_info[6] - env.now < customer.duration *urgent_ratio * q_para:
-                    urgent_ct_names.append(customer_name)
-                    pass
+                    urgent_ct_names.append(customer.name)
+                #if customer.time_info[6] - env.now < customer.duration *urgent_ratio * q_para:
+                #    urgent_ct_names.append(customer_name)
+                #    pass
             if package_type in [1,2]: #휴리스틱
                 print('휴리스틱')
                 all_trips = TripBuilderHeuristic(Customers, customer_names, K=len(available_robot_names), sort_type=package_type, robot_capacity=robot_capa, now_t=env.now)
@@ -539,8 +540,16 @@ def ResultSave(Customers, Robots, now_t):
     tw_over_customer_count = 0
     q_served = 0
     n_served = 0
+    customer_type = [-1,0] #0을 빼야하기 때문
+    tw_satified_customer = [0,0]
+    saved_ct_data = []
     for customer_name in Customers:
         customer = Customers[customer_name]
+        saved_ct_data.append([customer.name] + customer.time_info[:4] +[customer.time_info[6]]+ customer.location)
+        if customer.location[0] < 5:
+            customer_type[0] += 1
+        else:
+            customer_type[1] += 1
         if customer.name == 0:
             continue
         if customer.time_info[3] != None:
@@ -564,11 +573,15 @@ def ResultSave(Customers, Robots, now_t):
                 q_customer_t2.append(customer.time_info[2] - customer.time_info[1])
                 q_customer_t3.append(customer.time_info[3] - customer.time_info[2])
                 q_served += 1
+                if customer.time_info[3] < customer.time_info[6]:
+                    tw_satified_customer[0] += 1
             else:
                 n_customer_t1.append(customer.time_info[1] - customer.time_info[0])
                 n_customer_t2.append(customer.time_info[2] - customer.time_info[1])
                 n_customer_t3.append(customer.time_info[3] - customer.time_info[2])
                 n_served += 1
+                if customer.time_info[3] < customer.time_info[6]:
+                    tw_satified_customer[1] += 1
             served_count += 1
         else:
             unserved_customer_t.append(now_t - customer.time_info[0])
@@ -580,5 +593,5 @@ def ResultSave(Customers, Robots, now_t):
         if len(info) > 0:
             ave_val = sum(info)/len(info)
         res.append(ave_val)
-    customer_res = [len(customer_t3)] + res + [tw_over_customer_count, q_served, n_served]
-    return robot_res, customer_res
+    customer_res = [len(customer_t3)] + res + [tw_over_customer_count, q_served, n_served] + tw_satified_customer + customer_type
+    return robot_res, customer_res, saved_ct_data
