@@ -51,8 +51,10 @@ def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(r
 
 
 
-def OrderGenerator2(env, Customers, input_data, endless = 0, interval = 1, duration_index = 5):
+def OrderGenerator2(env, Customers, input_data, endless = 0, interval = 1, duration_index = 5, run_time = 140):
     for data in input_data:
+        if env.now > run_time -10 :
+            break
         Customers[data[0]] = Customer(env, data[0], data[1:3], type=data[3], size=data[4], service_time=1,duration = max(data[duration_index],endless))  # 자가 격리자
         try:
             yield env.timeout(data[7])

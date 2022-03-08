@@ -26,7 +26,7 @@ class Customer(object):
 
 
 class Robot(object):
-    def __init__(self, name, env, speed, customers,Operator, end_t = 120, capacity = 4, cal_type = 1):
+    def __init__(self, name, env, speed, customers,Operator, end_t = 140, capacity = 4, cal_type = 1):
         self.name = name
         self.env = env
         self.speed = speed
@@ -116,3 +116,5 @@ class Robot(object):
                         size += Customers[customer_name].size
                     print('고객 사이즈',size)
                     #input('확인 필요')
+        self.return_t = 10000
+        self.idle = False
