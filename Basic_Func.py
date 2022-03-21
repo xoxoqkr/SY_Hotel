@@ -3,7 +3,7 @@ import math
 import itertools
 import copy
 import operator
-from TripSelectionProblem import TripSelectionProblem
+#from TripSelectionProblem import TripSelectionProblem
 import random
 
 
@@ -161,7 +161,7 @@ def ValueFinder(value, infos):
 
 def RouteTimeWithTimePenalty(trip_data, customers, speed = 1, now_t = 0, cal_type = 1):
     route_t = 0
-    TW_violation = []
+    TW_violation = [[],[]]
     if cal_type == 2:
         trip = []
         for info in trip_data:
@@ -184,7 +184,10 @@ def RouteTimeWithTimePenalty(trip_data, customers, speed = 1, now_t = 0, cal_typ
         #if af > 0:
         #    route_t += 45 #서비스 시간
         if violated_t > 0 and customers[trip[index]].name > 0:
-            TW_violation.append(violated_t)
+            if customers[trip[index]].location[0] < 5:
+                TW_violation[0].append(violated_t)
+            else:
+                TW_violation[1].append(violated_t)
     return route_t, TW_violation
 
 
@@ -249,7 +252,7 @@ def TripBuilderEnumerate(customers, ava_customer_names,  ite_type = 'combination
             for add in over_cts_com:
                 rev = list(info) + list(add)
                 rev = copy.deepcopy(list(itertools.permutations(rev, len(rev))))
-                rev_raw_trip.append(rev)
+                rev_raw_trip.append(list(rev))
         raw_trips = rev_raw_trip
     #raw_trips += over_cts
     trips = []
@@ -260,7 +263,13 @@ def TripBuilderEnumerate(customers, ava_customer_names,  ite_type = 'combination
         #print(trip)
         for customer_name in trip:
             #input('확인 {} {}'.format(trip,customer_name))
-            ct = customers[customer_name]
+            try:
+                ct = customers[customer_name]
+            except:
+                ct = customers[int(list(customer_name)[0])]
+                #print(customers.keys())
+                #print(trip, list(customer_name), int(list(customer_name)[0]))
+                #input('에러 발생')
             #input('확인 2{}'.format(ct))
             size += ct.size
             ct_infos.append([ct.type,ct.location[0],ct.location[1],ct.name])
@@ -320,7 +329,7 @@ def TripBuilderHeuristic(customers, ava_customer_names, K = 1, sort_type = 1, ro
     return trips
 
 
-def TripsScore(trips, customers, speed = 1, now_t = 0, cal_type = 1, weight = [1,0]):
+def TripsScore(trips, customers, speed = 1, now_t = 0, cal_type = 1, weight = [1,0,0]):
     scores = []
     index = 0
     test = [[],[]]
@@ -328,10 +337,11 @@ def TripsScore(trips, customers, speed = 1, now_t = 0, cal_type = 1, weight = [1
         #input('정보1 {}'.format(trip))
         route_time, tw_penalty = RouteTimeWithTimePenalty(trip, customers, speed = speed, now_t = now_t, cal_type = cal_type)
         trip_len = len(trip)-2
-        trip_score = (route_time/trip_len)*weight[0]+ sum(tw_penalty)*weight[1]
+        trip_score = (route_time/trip_len)*weight[0]+ sum(tw_penalty[0])*weight[1] + sum(tw_penalty[1])*weight[2]
         test[0].append((route_time/trip_len))
-        test[1].append(sum(tw_penalty))
-        scores.append([index, trip, trip_score, round(sum(tw_penalty),4)/trip_len,len(tw_penalty)]) #[index, trip, 라우트 시간, tw남은시간,tw위반 고객 수, trip고객 수]
+        test[1].append(sum(tw_penalty[0]))
+        test[1].append(sum(tw_penalty[1]))
+        scores.append([index, trip, trip_score, round(sum(tw_penalty[0]),4)/trip_len,len(tw_penalty[0]),round(sum(tw_penalty[1]),4)/trip_len,len(tw_penalty[1])]) #[index, trip, 라우트 시간, tw남은시간,tw위반 고객 수, trip고객 수]
         index += 1
         #input('정보2 {}'.format(scores[-1]))
     try:
@@ -425,7 +435,8 @@ def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy'
             D,S,P = InputCalculator(trip_infos, customers)
         else:
             D,S,P = InputCalculator2(trip_infos, customers)
-        trip_names = TripSelectionProblem(D, S, P, len(robots))
+        #trip_names = TripSelectionProblem(D, S, P, len(robots))
+        trip_names = []
         for trip_name in trip_names:
             selected_trip_infos.append(trip_infos[trip_name])
     return selected_trip_infos
@@ -503,7 +514,7 @@ def UrgentCusomerSorter(customers, now_t, weight= [1,2,2,1], urgent_ratio = 0.1 
 
 
 def SystemRunner(env, Robots, Customers, Operator, assign_type, speed = 1, interval = 5, end_t = 800, cal_type = 2, thres = 0,
-                 package_type = 5, wait_t = 0, urgent_ratio = 0.2, ite_type = 'combinations', weight = [1,0]):
+                 package_type = 5, wait_t = 0, urgent_ratio = 0.2, ite_type = 'combinations', weight = [1,0,0]):
     #package_type = 1 :선입선출
     #package_type = 2 : LT가 작은 고객 부터 정렬
     #package_type = 5 : 가능한 모든 경로 구해보기
