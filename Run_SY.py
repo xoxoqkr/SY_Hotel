@@ -43,7 +43,7 @@ for name in range(robot_num):
 
 #3. Run system
 #3-1 Customer Generator
-Customers[0] = Customer(env, 0, [1,0], type = 1, size = 0)
+Customers[0] = Customer(env, 0, [1,0], type = 1, size = 0, duration = 1000)
 if input_data == None:
     env.process(OrderGenerator(env, Customers, customer_num = customer_num,lamda = OrderGenLamda))
 else:
@@ -105,9 +105,11 @@ for robotr_name in Robots:
 f1.close()
 f2.close()
 
-f1 = open('customer data save.txt','a')
 
-header1 = '데이터;{};로봇수;{};방식;{};\n'.format(data_file,robot_num, package_type)
+
+header1 = '데이터;{};로봇수;{};방식;{};가중치 정보 ;{};{};{};'.format(data_file,robot_num, package_type, weight[0], weight[1], weight[2])
+f1 = open('customer data save'+header1 +'.txt','a', encoding = 'utf-8')
+header1 += '\n'
 f1.write(header1)
 header2 = '고객이름;생성시점;패키지구성시점;로봇에 실리 시점;고객 도착시점;TW종료 시점;층;호실; \n'
 f1.write(header2)

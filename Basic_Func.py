@@ -177,10 +177,10 @@ def RouteTimeWithTimePenalty(trip_data, customers, speed = 1, now_t = 0, cal_typ
             move_t = round(distance(bf.location,af.location)/speed,4)
         else:
             #print(customers[trip[index - 1 ]], '->',customers[trip[index]])
-            move_t = distance2(bf.location, af.location)
+            move_t = distance2(bf.location, af.location) #로봇이 1m/s로 움직이기 때문
         #print('move_t {}'.format(move_t))
         route_t += move_t + af.time_info[5]
-        violated_t = max(0, af.time_info[6]- (now_t + route_t))
+        violated_t = max(0, (now_t + route_t) - af.time_info[6]) #todo: TW위반 시간 계산.
         #if af > 0:
         #    route_t += 45 #서비스 시간
         if violated_t > 0 and customers[trip[index]].name > 0:
@@ -337,11 +337,13 @@ def TripsScore(trips, customers, speed = 1, now_t = 0, cal_type = 1, weight = [1
         #input('정보1 {}'.format(trip))
         route_time, tw_penalty = RouteTimeWithTimePenalty(trip, customers, speed = speed, now_t = now_t, cal_type = cal_type)
         trip_len = len(trip)-2
-        trip_score = (route_time/trip_len)*weight[0]+ sum(tw_penalty[0])*weight[1] + sum(tw_penalty[1])*weight[2]
+        trip_score = ((route_time/trip_len)*weight[0]+ sum(tw_penalty[0])*weight[1] + sum(tw_penalty[1])*weight[2])/trip_len
         test[0].append((route_time/trip_len))
         test[1].append(sum(tw_penalty[0]))
         test[1].append(sum(tw_penalty[1]))
-        scores.append([index, trip, trip_score, round(sum(tw_penalty[0]),4)/trip_len,len(tw_penalty[0]),round(sum(tw_penalty[1]),4)/trip_len,len(tw_penalty[1])]) #[index, trip, 라우트 시간, tw남은시간,tw위반 고객 수, trip고객 수]
+        ave_cost_q_ct = round(sum(tw_penalty[0]), 4) / trip_len
+        ave_cost_n_ct = round(sum(tw_penalty[1]),4)/trip_len
+        scores.append([index, trip, trip_score, ave_cost_n_ct,len(tw_penalty[1]),ave_cost_q_ct,len(tw_penalty[0])]) #[index, trip, 라우트 고객 평균 비용, 일반고객 tw초과 시간, 일반고객 tw초과 수, 격리고객 tw초과 시간, 격리고객 tw초과 수]
         index += 1
         #input('정보2 {}'.format(scores[-1]))
     try:
@@ -408,7 +410,7 @@ def RouteRobotAssignSolver(robots, trip_infos, customers, assign_type = 'greedy'
         # [index, trip, 라우트 시간, tw 남은시간,tw위반 고객 수]
         # 2 : 경로가 짧은 순 / 3: 남은 시간이 촉박한 것.
         #trip_infos.sort(key=operator.itemgetter(5), reve)  # 경로 길이가 짧은 순으로 수행
-        trip_infos.sort(key=operator.itemgetter(2)) #경로 길이가 짧은 순으로 수행 #todo : 0308
+        trip_infos.sort(key=operator.itemgetter(2)) #todo : 비용이 작은 순으로 정렬
         print('현재 trip_info수{}'.format(len(trip_infos)))
         #input(trip_infos[:5])
         select_count = 0

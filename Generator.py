@@ -5,7 +5,7 @@ from Class_SY import Customer
 
 
 def OrderGenerator(env, Customers, customer_num = 110, lamda = 1, floors= list(range(2, 17)), floor_data = [[4, 24], [10, 24], [14, 20], [17, 16]], meal_order_ratio = 0.2,
-                   input_data = None, duration = [60]):
+                   input_data = None, duration = [60], ratio = 0):
     #고객 생성기
     pool = []
     #floors = list(range(2, 17))
@@ -72,9 +72,13 @@ def InputDataTransform(dir):
         info = org_info.split('\t')
         #print(info)
         tem = []
+        print(info)
+        #input('check')
         for ele in info[:5]:
             tem.append(int(ele))
         for ele in info[5:8]:
+            if ele == '\n':
+                break
             tem.append(float(ele))
         input_data.append(tem)
     return input_data
